@@ -70,7 +70,7 @@ def create_support_team():
 Analyze the customer's complaint.
 
 GUIDELINES FOR URGENCY:
-- Standard questions regarding delayed shipments, returns, replacements, or password resets MUST be marked 'Low' or 'Medium' urgency.
+- Standard questions regarding delayed shipments, returns, replacements, manual instructions, or password resets MUST be marked 'Low' or 'Medium' urgency.
 - Mark 'High' urgency ONLY if the customer is extremely hostile, threatening legal/bank action, or reporting critical payment fraud.
 
 Format your output strictly:
@@ -78,7 +78,7 @@ Category: [Shipping | Refund | Account | Hardware | Billing | General]
 Urgency: [Low | Medium | High]
 Sentiment: [Positive | Neutral | Frustrated | Angry]
 Summary: <One-line clear summary>
-Focus Query: <A natural 4-8 word search phrase describing the topic, e.g. 'late delivery shipping policy tracking updates'>"""
+Focus Query: <A natural 4-8 word search phrase describing the topic, e.g. 'late delivery order tracking shipping delay'>"""
     )
 
     # 2. Knowledge Base Agent
@@ -101,9 +101,14 @@ If the tool returns NO_MATCH, output: 'NO_MATCH: No relevant company policies or
         description="Drafts grounded customer replies using only the facts provided.",
         system_message="""You are the Resolution Agent.
 Write a courteous, professional reply directly addressed to the customer.
+
 CRITICAL GROUNDING RULES:
-- Use ONLY facts retrieved by KnowledgeBaseAgent. Never invent return windows, delivery timelines, or warranty terms.
-- If no matching documents exist (NO_MATCH), state politely and honestly that this case requires dedicated support.
+- Use ONLY facts retrieved by KnowledgeBaseAgent.
+- Explain the relevant policy clearly (e.g., standard delivery times, return windows, reset steps).
+- When policy info is successfully retrieved, provide that policy to the customer as the resolution. Do NOT tell them to contact another support team if the policy already provides the answer.
+- Always output 'Confidence: High' if relevant policy information was found and provided.
+- If no matching documents exist (NO_MATCH), state politely that this case requires dedicated support and set 'Confidence: Low'.
+
 At the very end of your response, output:
 Confidence: [High | Medium | Low]"""
     )
@@ -118,15 +123,18 @@ Confidence: [High | Medium | Low]"""
 Review the previous conversation and determine ticket status and escalation reason.
 
 ESCALATION RULES:
+Escalate ONLY if at least one of these conditions is true:
 1. Urgency is 'High' OR Sentiment is 'Angry'.
 2. KnowledgeBaseAgent found no matching documents (NO_MATCH).
 3. The issue involves legal threats, repeated payment errors, or fraud disputes.
-4. ResolutionAgent confidence is 'Low'.
+4. ResolutionAgent confidence is explicitly 'Low'.
 
-If ANY rule is met:
+If ANY of the above escalation conditions are met:
 Status: Escalated
-Reason: <State the exact trigger, e.g., High urgency + angry customer>
-Otherwise:
+Reason: <State the exact trigger, e.g., High urgency + angry customer or NO_MATCH>
+
+OTHERWISE:
+If the customer's question was answered using the knowledge base policies (shipping, refunds, password reset, hardware replacements), the ticket is RESOLVED:
 Status: Resolved
 Reason: None
 
